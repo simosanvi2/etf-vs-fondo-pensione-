@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ETF o Fondo Pensione</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap">
+<style>
+  :root {
+    --page: #f5f5f1;
+    --surface: #fcfcfb;
+    --surface-2: #efeee9;
+    --ink: #121412;
+    --ink-2: #52514e;
+    --muted: #7d7b75;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --etf: #2a78d6;
+    --fondo: #eb6834;
+    --accent: #1f4f8f;
+    --good: #006300;
+    --focus: #2a78d6;
+    --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-cond: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0f0f0e;
+      --surface: #1a1a19;
+      --surface-2: #242422;
+      --ink: #f4f4f1;
+      --ink-2: #c3c2b7;
+      --muted: #8f8d86;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --etf: #3987e5;
+      --fondo: #d95926;
+      --accent: #8fb8ef;
+      --good: #0ca30c;
+      --focus: #6da7ec;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0f0f0e;
+    --surface: #1a1a19;
+    --surface-2: #242422;
+    --ink: #f4f4f1;
+    --ink-2: #c3c2b7;
+    --muted: #8f8d86;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --etf: #3987e5;
+    --fondo: #d95926;
+    --accent: #8fb8ef;
+    --good: #0ca30c;
+    --focus: #6da7ec;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 14px/1.5 var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 1360px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 28px 56px;
+  }
+  header.top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--grid);
+    margin-bottom: 24px;
+  }
+  .eyebrow {
+    font: 600 11px/1 var(--font-cond);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+  h1 {
+    font-size: clamp(24px, 3.2vw, 34px);
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h1 .vs { color: var(--muted); font-weight: 400; }
+  h1 .etf-word { color: var(--etf); }
+  h1 .fondo-word { color: var(--fondo); }
+  .lede { color: var(--ink-2); max-width: 62ch; margin: 8px 0 0; }
+  .unit-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    background: var(--surface);
+  }
+  .unit-toggle button {
+    font: 500 13px var(--font);
+    border: 0;
+    background: transparent;
+    color: var(--ink-2);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .unit-toggle button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  /* ---------- Parametri ---------- */
+  aside.controls {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px 18px 18px;
+  }
+  @media (max-width: 960px) {
+    aside.controls { position: static; max-height: none; }
+  }
+  fieldset {
+    border: 0;
+    padding: 18px 0 16px;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+    border-bottom: 1px solid var(--grid);
+  }
+  fieldset:last-of-type { border-bottom: 0; }
+  legend {
+    font: 600 11px/1 var(--font-cond);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0;
+    float: left;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  legend .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .field { display: grid; gap: 4px; }
+  .field label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .field output { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.4; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); margin: 2px 0; }
+  input[type="number"], select {
+    width: 100%;
+    font: 14px var(--font);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    background: var(--page);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px;
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .seg button {
+    font: 500 12px var(--font);
+    padding: 7px 4px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--page);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); background: var(--surface-2); }
+
+  /* ---------- Risultati ---------- */
+  main { display: grid; gap: 20px; min-width: 0; }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--grid);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  @media (max-width: 1180px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 460px) { .kpis { grid-template-columns: minmax(0, 1fr); } }
+  .kpi { background: var(--surface); padding: 16px 18px; display: grid; gap: 4px; align-content: start; }
+  .kpi .k-label {
+    font: 600 11px/1.2 var(--font-cond);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .kpi .k-label .sw { width: 10px; height: 10px; border-radius: 2px; }
+  .kpi .k-value { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+  .kpi .k-sub { font-size: 12.5px; color: var(--ink-2); }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 600 12px var(--font);
+    padding: 3px 9px 3px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--ink);
+    width: fit-content;
+  }
+  .pill .sw { width: 8px; height: 8px; border-radius: 50%; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 18px 14px;
+    min-width: 0;
+  }
+  .card h2 { font-size: 15px; font-weight: 600; margin: 0; text-wrap: balance; }
+  .card .sub { color: var(--ink-2); font-size: 13px; margin: 3px 0 0; max-width: 75ch; }
+  .card-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; align-items: flex-start; margin-bottom: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .ln { width: 16px; height: 2px; border-radius: 1px; }
+  .legend .sq { width: 10px; height: 10px; border-radius: 2px; }
+  .chart-box { position: relative; height: 340px; }
+  .chart-box.sm { height: 260px; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  @media (max-width: 1180px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+
+  details.card summary {
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    list-style-position: inside;
+  }
+  .table-scroll { overflow-x: auto; margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
+  th:first-child, td:first-child { text-align: left; }
+  th { font: 600 11px var(--font-cond); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); position: sticky; top: 0; background: var(--surface); }
+  td.pos { color: var(--good); }
+  tr.hl td { background: var(--surface-2); font-weight: 600; }
+
+  .notes { color: var(--ink-2); font-size: 13px; }
+  .notes h2 { color: var(--ink); }
+  .notes ul { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 6px; max-width: 95ch; }
+  .notes b { color: var(--ink); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">Simulatore · fiscalità italiana 2026</p>
+      <h1><span class="etf-word">ETF globale</span> <span class="vs">o</span> <span class="fondo-word">fondo pensione</span>?</h1>
+      <p class="lede">Stesso versamento annuo, due strade. Il simulatore applica bollo, capital gain al 26%, deduzione IRPEF fino a 5.164,57 €, imposta del 20% sui rendimenti del fondo e aliquota di uscita dal 15% al 9%.</p>
+    </div>
+    <div class="unit-toggle" role="group" aria-label="Unità di misura">
+      <button type="button" id="btn-nominal" aria-pressed="true">Euro nominali</button>
+      <button type="button" id="btn-real" aria-pressed="false">Euro di oggi</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="controls" aria-label="Parametri della simulazione">
+      <fieldset>
+        <legend>Tu e il tuo reddito</legend>
+        <div class="field">
+          <label for="income">Reddito imponibile annuo <output id="income-out"></output></label>
+          <input type="range" id="income" min="10000" max="150000" step="1000" value="40000">
+          <span class="hint" id="marginal-hint"></span>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="worker">Tipo di reddito</label>
+            <select id="worker">
+              <option value="dip" selected>Dipendente</option>
+              <option value="altro">Altro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="brackets">Scaglioni IRPEF</label>
+            <select id="brackets">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+            </select>
+          </div>
+        </div>
+        <span class="hint">2026: 23% fino a 28.000 €, 33% fino a 50.000 €, 43% oltre. 2025: 35% nello scaglione centrale. "Altro" non applica le detrazioni da lavoro.</span>
+        <div class="field">
+          <label for="addiz">Addizionali regionale + comunale <output id="addiz-out"></output></label>
+          <input type="range" id="addiz" min="0" max="4" step="0.1" value="2">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Piano di investimento</legend>
+        <div class="field">
+          <label for="contrib">Versamento annuo (di tasca tua) <output id="contrib-out"></output></label>
+          <input type="range" id="contrib" min="500" max="15000" step="100" value="5000">
+          <span class="hint">Deducibile fino a 5.164,57 € l'anno, contributo del datore incluso.</span>
+        </div>
+        <div class="field">
+          <label for="years">Orizzonte <output id="years-out"></output></label>
+          <input type="range" id="years" min="5" max="45" step="1" value="30">
+        </div>
+        <div class="field">
+          <label for="refund">Il rimborso IRPEF viene…</label>
+          <div class="seg" id="refund" role="group" aria-label="Uso del rimborso IRPEF">
+            <button type="button" data-v="etf" aria-pressed="true">Investito in ETF</button>
+            <button type="button" data-v="fondo" aria-pressed="false">Versato nel fondo</button>
+            <button type="button" data-v="spesa" aria-pressed="false">Speso</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="infl">Inflazione attesa <output id="infl-out"></output></label>
+          <input type="range" id="infl" min="0" max="5" step="0.1" value="2">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="sw" style="background:var(--etf)"></span>ETF azionario globale</legend>
+        <div class="field">
+          <label for="retEtf">Rendimento lordo annuo <output id="retEtf-out"></output></label>
+          <input type="range" id="retEtf" min="0" max="10" step="0.1" value="6">
+        </div>
+        <div class="field">
+          <label for="terEtf">TER <output id="terEtf-out"></output></label>
+          <input type="range" id="terEtf" min="0" max="0.8" step="0.01" value="0.20">
+          <span class="hint">Bollo 0,2% sul controvalore di fine anno, pagato vendendo quote. Plusvalenze al 26%.</span>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="sw" style="background:var(--fondo)"></span>Fondo pensione</legend>
+        <div class="field">
+          <label>Tipologia</label>
+          <div class="seg" id="fundType" role="group" aria-label="Tipologia di fondo">
+            <button type="button" data-v="neg" aria-pressed="true">Negoziale</button>
+            <button type="button" data-v="aperto" aria-pressed="false">Aperto</button>
+            <button type="button" data-v="pip" aria-pressed="false">PIP</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="retFondo">Rendimento lordo linea <output id="retFondo-out"></output></label>
+          <input type="range" id="retFondo" min="0" max="10" step="0.1" value="6">
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="terFondo">Costo annuo %</label>
+            <input type="number" id="terFondo" min="0" max="4" step="0.05" value="0.35">
+          </div>
+          <div class="field">
+            <label for="feeFondo">Quota fissa €/anno</label>
+            <input type="number" id="feeFondo" min="0" max="200" step="1" value="22">
+          </div>
+        </div>
+        <div class="field">
+          <label for="govShare">Quota titoli di Stato <output id="govShare-out"></output></label>
+          <input type="range" id="govShare" min="0" max="100" step="5" value="10">
+          <span class="hint" id="fund-tax-hint"></span>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="employer">Contributo datore €/anno</label>
+            <input type="number" id="employer" min="0" max="10000" step="50" value="0">
+          </div>
+          <div class="field">
+            <label for="prior">Anni di adesione già maturati</label>
+            <input type="number" id="prior" min="0" max="40" step="1" value="0">
+          </div>
+        </div>
+      </fieldset>
+    </aside>
+
+    <main>
+      <section class="kpis" aria-label="Risultato alla fine dell'orizzonte">
+        <div class="kpi">
+          <span class="k-label"><span class="sw" style="background:var(--etf)"></span>ETF · netto finale</span>
+          <span class="k-value" id="k-etf">–</span>
+          <span class="k-sub" id="k-etf-sub"></span>
+        </div>
+        <div class="kpi">
+          <span class="k-label"><span class="sw" style="background:var(--fondo)"></span>Fondo · netto finale</span>
+          <span class="k-value" id="k-fondo">–</span>
+          <span class="k-sub" id="k-fondo-sub"></span>
+        </div>
+        <div class="kpi">
+          <span class="k-label">Differenza</span>
+          <span class="k-value" id="k-diff">–</span>
+          <span id="k-winner"></span>
+        </div>
+        <div class="kpi">
+          <span class="k-label">Leva fiscale del fondo</span>
+          <span class="k-value" id="k-refund">–</span>
+          <span class="k-sub" id="k-refund-sub"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Capitale netto se liquidi nell'anno</h2>
+            <p class="sub" id="main-sub">Valore dopo tutte le tasse di uscita. Per il fondo include i rimborsi IRPEF secondo l'opzione scelta.</p>
+          </div>
+          <div class="legend">
+            <span><span class="ln" style="background:var(--etf)"></span>ETF</span>
+            <span><span class="ln" style="background:var(--fondo)"></span>Fondo pensione</span>
+            <span><span class="ln" style="background:var(--muted)"></span>Versato di tasca propria</span>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="c-main" aria-label="Grafico del capitale netto per anno" role="img"></canvas></div>
+      </section>
+
+      <div class="grid2">
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Dove finiscono tasse e costi</h2>
+              <p class="sub">Totali sull'intero orizzonte. Il risparmio IRPEF è un'entrata e va sotto lo zero.</p>
+            </div>
+            <div class="legend">
+              <span><span class="sq" style="background:var(--etf)"></span>ETF</span>
+              <span><span class="sq" style="background:var(--fondo)"></span>Fondo</span>
+            </div>
+          </div>
+          <div class="chart-box sm"><canvas id="c-costs" aria-label="Grafico di tasse e costi" role="img"></canvas></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Aliquota sulla prestazione del fondo</h2>
+              <p class="sub">15% fino al 15° anno di adesione, poi −0,30 punti l'anno fino al 9% dal 35° anno. Si applica solo ai contributi dedotti.</p>
+            </div>
+          </div>
+          <div class="chart-box sm"><canvas id="c-rate" aria-label="Grafico dell'aliquota di uscita" role="img"></canvas></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Chi vince al variare del rendimento di mercato</h2>
+            <p class="sub">Vantaggio netto del fondo sull'ETF a fine orizzonte, con lo stesso rendimento lordo per entrambi e tutti gli altri parametri invariati.</p>
+          </div>
+          <div class="legend">
+            <span><span class="sq" style="background:var(--fondo)"></span>Vince il fondo</span>
+            <span><span class="sq" style="background:var(--etf)"></span>Vince l'ETF</span>
+          </div>
+        </div>
+        <div class="chart-box sm"><canvas id="c-sens" aria-label="Grafico di sensibilità al rendimento" role="img"></canvas></div>
+      </section>
+
+      <details class="card">
+        <summary>Tabella anno per anno</summary>
+        <div class="table-scroll">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th>Anno</th>
+                <th>Versato</th>
+                <th>ETF netto</th>
+                <th>Fondo lordo</th>
+                <th>Aliquota uscita</th>
+                <th>Rimborso IRPEF</th>
+                <th>Fondo netto</th>
+                <th>Fondo − ETF</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+
+      <section class="card notes">
+        <h2>Come calcola il simulatore</h2>
+        <ul>
+          <li><b>ETF.</b> Versamento a inizio anno, crescita al rendimento lordo meno TER. A fine anno l'imposta di bollo dello 0,2% sul controvalore viene pagata vendendo quote, e la plusvalenza realizzata in quella vendita è tassata al 26%. In uscita si paga il 26% sulla plusvalenza residua.</li>
+          <li><b>Deduzione IRPEF.</b> Il risparmio è la differenza tra l'IRPEF netta calcolata sul reddito pieno e quella sul reddito ridotto del versamento dedotto, con gli scaglioni scelti e, per i dipendenti, le detrazioni da lavoro (art. 13 TUIR). Si somma il risparmio sulle addizionali. Il tetto di 5.164,57 € include il contributo del datore; il rimborso arriva l'anno dopo.</li>
+          <li><b>Fondo pensione.</b> Il rendimento maturato ogni anno, al netto dei costi, è tassato al 20%, ridotto al 12,5% per la parte in titoli di Stato. Le perdite generano un credito usato negli anni successivi. Il fondo non paga il bollo.</li>
+          <li><b>Uscita dal fondo.</b> Sulla parte di prestazione formata da contributi dedotti si applica il 15%, ridotto di 0,30 punti per ogni anno di adesione oltre il 15°, fino al 9%. I rendimenti, già tassati, e i contributi non dedotti sono esenti.</li>
+          <li><b>Cosa non è modellato.</b> Il vincolo di convertire in rendita almeno metà del montante, i riscatti e le anticipazioni (con aliquote diverse), il TFR, il plafond extra per i neoassunti dopo il 2007, il taglio del cuneo fiscale e le soglie di esenzione delle addizionali. I rendimenti sono costanti: la realtà ha volatilità e ordine dei rendimenti. Non è consulenza finanziaria.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Costanti fiscali ----------
+  var DEDUCTION_CAP = 5164.57;
+  var CGT = 0.26;             // plusvalenze ETF
+  var BOLLO = 0.002;          // imposta di bollo su prodotti finanziari
+  var FUND_TAX = 0.20;        // imposta sostitutiva sui rendimenti del fondo
+  var FUND_TAX_GOV = 0.125;   // quota in titoli di Stato e white list
+  var BRACKETS = {
+    "2026": [[28000, 0.23], [50000, 0.33], [Infinity, 0.43]],
+    "2025": [[28000, 0.23], [50000, 0.35], [Infinity, 0.43]]
+  };
+  var FUND_PRESETS = {
+    neg:    { ter: 0.35, fee: 22 },
+    aperto: { ter: 1.20, fee: 15 },
+    pip:    { ter: 1.90, fee: 0 }
+  };
+
+  function irpefLorda(x, br) {
+    var tax = 0, prev = 0;
+    x = Math.max(0, x);
+    for (var i = 0; i < br.length; i++) {
+      var top = br[i][0];
+      if (x > prev) tax += (Math.min(x, top) - prev) * br[i][1];
+      prev = top;
+    }
+    return tax;
+  }
+
+  // Detrazioni per lavoro dipendente (art. 13 c.1 TUIR, dal 2025)
+  function detrazioneDip(r) {
+    var d;
+    if (r <= 15000) d = 1955;
+    else if (r <= 28000) d = 1910 + 1190 * (28000 - r) / 13000;
+    else if (r <= 50000) d = 1910 * (50000 - r) / 22000;
+    else d = 0;
+    if (r > 25000 && r <= 35000) d += 65;
+    return d;
+  }
+
+  function irpefNetta(imponibile, redditoComplessivo, p) {
+    var detr = p.worker === "dip" ? detrazioneDip(redditoComplessivo) : 0;
+    return Math.max(0, irpefLorda(imponibile, BRACKETS[p.brackets]) - detr);
+  }
+
+  // Risparmio d'imposta per una deduzione D
+  function taxSaving(p, D) {
+    if (D <= 0) return 0;
+    var R = p.income;
+    var before = irpefNetta(R, R, p);
+    var after = irpefNetta(R - D, R, p);
+    var addiz = before > 0 ? p.addiz * Math.min(D, R) : 0;
+    return (before - after) + addiz;
+  }
+
+  function exitRate(yearsOfMembership) {
+    return Math.max(0.09, 0.15 - 0.003 * Math.max(0, yearsOfMembership - 15));
+  }
+
+  // ---------- Posizione in ETF (valore + costo fiscale) ----------
+  function newPos() { return { v: 0, b: 0, ter: 0, bollo: 0, cgt: 0 }; }
+  function etfYear(pos, r, ter) {
+    if (pos.v <= 0) return;
+    var grown = pos.v * (1 + r);
+    pos.ter += grown * ter;
+    pos.v = grown * (1 - ter);
+    // bollo 0,2% sul controvalore di fine anno, pagato vendendo quote
+    var bollo = BOLLO * pos.v;
+    var g = Math.max(0, (pos.v - pos.b) / pos.v);  // quota di plusvalenza per euro venduto
+    var sold = bollo / (1 - CGT * g);
+    pos.cgt += CGT * sold * g;
+    pos.bollo += bollo;
+    pos.b -= sold * (pos.b / pos.v);
+    pos.v -= sold;
+  }
+  function liquidate(pos) {
+    var tax = CGT * Math.max(0, pos.v - pos.b);
+    return { net: pos.v - tax, tax: tax };
+  }
+
+  // ---------- Simulazione ----------
+  function simulate(p) {
+    var etf = newPos(), side = newPos();
+    var F = 0, dedBase = 0, lossCredit = 0, pending = 0;
+    var fTer = 0, fFee = 0, fTax = 0, irpefSaved = 0, refundsSpent = 0, pocket = 0;
+    var fundTaxRate = FUND_TAX * (1 - p.govShare) + FUND_TAX_GOV * p.govShare;
+    var employerDed = Math.min(p.employer, DEDUCTION_CAP);
+    var rows = [];
+    var firstRefund = 0, firstDed = 0;
+
+    for (var t = 1; t <= p.years; t++) {
+      pocket += p.contrib;
+
+      // ETF: versamento a inizio anno
+      etf.v += p.contrib; etf.b += p.contrib;
+      etfYear(etf, p.retEtf, p.terEtf);
+
+      // Rimborso IRPEF dell'anno precedente
+      var own = p.contrib;
+      if (p.refundMode === "fondo") own += pending;
+      else if (p.refundMode === "etf" && pending > 0) { side.v += pending; side.b += pending; }
+      else refundsSpent += pending;
+
+      // Fondo: deduzione entro il tetto (contributo datore incluso)
+      var ownDed = Math.min(own, Math.max(0, DEDUCTION_CAP - p.employer));
+      var refund = taxSaving(p, ownDed);
+      if (t === 1) { firstRefund = refund; firstDed = ownDed; }
+      irpefSaved += refund;
+      dedBase += ownDed + employerDed;
+
+      F += own + p.employer - p.fee;
+      fFee += p.fee;
+      var grown = F * (1 + p.retFondo);
+      fTer += grown * p.terFondo;
+      var after = grown * (1 - p.terFondo);
+      var result = after - F;
+      var tax = 0;
+      if (result >= 0) {
+        var used = Math.min(lossCredit, result);
+        lossCredit -= used;
+        tax = fundTaxRate * (result - used);
+      } else {
+        lossCredit += -result;
+      }
+      fTax += tax;
+      F = after - tax;
+
+      etfYear(side, p.retEtf, p.terEtf);
+      pending = refund;
+
+      // Valori netti se si liquidasse a fine anno t
+      var etfLiq = liquidate(etf);
+      var sideLiq = liquidate(side);
+      var membership = p.prior + t;
+      var rate = exitRate(membership);
+      var exitTax = rate * Math.min(dedBase, Math.max(0, F));
+      var cashRefund = p.refundMode === "spesa" ? 0 : pending;
+      var fondoNet = F - exitTax + sideLiq.net + cashRefund;
+      var defl = Math.pow(1 + p.infl, t);
+
+      rows.push({
+        t: t, pocket: pocket, defl: defl,
+        etfNet: etfLiq.net, fondoGross: F, fondoNet: fondoNet,
+        rate: rate, refund: refund, exitTax: exitTax,
+        etfTaxFinal: etfLiq.tax, sideTaxFinal: sideLiq.tax
+      });
+    }
+
+    var last = rows[rows.length - 1];
+    if (p.refundMode === "spesa") refundsSpent += pending;
+    return {
+      rows: rows, last: last,
+      firstRefund: firstRefund, firstDed: firstDed,
+      irpefSaved: irpefSaved, refundsSpent: refundsSpent,
+      fundTaxRate: fundTaxRate,
+      costs: {
+        etf: {
+          gestione: etf.ter,
+          bollo: etf.bollo,
+          rendimenti: etf.cgt + last.etfTaxFinal,
+          uscita: 0,
+          irpef: 0
+        },
+        fondo: {
+          gestione: fTer + fFee + side.ter,
+          bollo: side.bollo,
+          rendimenti: fTax + side.cgt + last.sideTaxFinal,
+          uscita: last.exitTax,
+          irpef: -irpefSaved
+        }
+      }
+    };
+  }
+
+  // Tasso interno di rendimento: versamenti a inizio anno, valore finale a fine anno N
+  function irr(contrib, years, finalValue) {
+    function fv(r) {
+      var s = 0;
+      for (var t = 0; t < years; t++) s += contrib * Math.pow(1 + r, years - t);
+      return s;
+    }
+    var lo = -0.99, hi = 1;
+    for (var i = 0; i < 100; i++) {
+      var mid = (lo + hi) / 2;
+      if (fv(mid) > finalValue) hi = mid; else lo = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  // ---------- Formattazione ----------
+  var eur0 = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+  var num0 = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 });
+  var pct1 = new Intl.NumberFormat("it-IT", { style: "percent", minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  var pct2 = new Intl.NumberFormat("it-IT", { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function eurShort(v) {
+    var a = Math.abs(v);
+    if (a >= 1e6) return (v / 1e6).toLocaleString("it-IT", { maximumFractionDigits: 2 }) + " M€";
+    if (a >= 1e3) return num0.format(v / 1e3) + " k€";
+    return num0.format(v) + " €";
+  }
+  function signedEur(v) { return (v > 0 ? "+" : v < 0 ? "−" : "") + eur0.format(Math.abs(v)); }
+
+  // ---------- Stato UI ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { real: false, refundMode: "etf", fundType: "neg" };
+
+  function readParams() {
+    return {
+      income: +$("income").value,
+      worker: $("worker").value,
+      brackets: $("brackets").value,
+      addiz: +$("addiz").value / 100,
+      contrib: +$("contrib").value,
+      years: +$("years").value,
+      infl: +$("infl").value / 100,
+      retEtf: +$("retEtf").value / 100,
+      terEtf: +$("terEtf").value / 100,
+      retFondo: +$("retFondo").value / 100,
+      terFondo: Math.max(0, +$("terFondo").value || 0) / 100,
+      fee: Math.max(0, +$("feeFondo").value || 0),
+      govShare: +$("govShare").value / 100,
+      employer: Math.max(0, +$("employer").value || 0),
+      prior: Math.max(0, Math.round(+$("prior").value || 0)),
+      refundMode: state.refundMode
+    };
+  }
+
+  function setOutputs(p) {
+    $("income-out").textContent = eur0.format(p.income);
+    $("addiz-out").textContent = pct1.format(p.addiz);
+    $("contrib-out").textContent = eur0.format(p.contrib);
+    $("years-out").textContent = p.years + " anni";
+    $("infl-out").textContent = pct1.format(p.infl);
+    $("retEtf-out").textContent = pct1.format(p.retEtf);
+    $("terEtf-out").textContent = pct2.format(p.terEtf);
+    $("retFondo-out").textContent = pct1.format(p.retFondo);
+    $("govShare-out").textContent = Math.round(p.govShare * 100) + "%";
+  }
+
+  // ---------- Grafici ----------
+  var FONT = "'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif";
+  Chart.defaults.font.family = FONT;
+  function tok(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  var charts = {};
+
+  var crosshair = {
+    id: "crosshair",
+    afterDatasetsDraw: function (chart) {
+      var act = chart.tooltip && chart.tooltip.getActiveElements();
+      if (!act || !act.length) return;
+      var x = act[0].element.x, a = chart.chartArea, ctx = chart.ctx;
+      ctx.save();
+      ctx.strokeStyle = tok("--axis");
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, a.top); ctx.lineTo(x, a.bottom); ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  function baseOptions() {
+    var ink2 = tok("--ink-2"), muted = tok("--muted"), grid = tok("--grid"), axis = tok("--axis");
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? false : { duration: 250 },
+      interaction: { mode: "index", intersect: false },
+      layout: { padding: { top: 4, right: 8 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: tok("--surface"),
+          titleColor: tok("--ink"),
+          bodyColor: ink2,
+          borderColor: tok("--border"),
+          borderWidth: 1,
+          padding: 10,
+          boxPadding: 4,
+          usePointStyle: true,
+          titleFont: { family: FONT, weight: "600" },
+          bodyFont: { family: FONT }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { color: axis },
+          ticks: { color: muted, font: { family: FONT, size: 11 }, maxRotation: 0, autoSkipPadding: 12 }
+        },
+        y: {
+          grid: { color: grid },
+          border: { display: false },
+          ticks: { color: muted, font: { family: FONT, size: 11 }, padding: 6 }
+        }
+      }
+    };
+  }
+
+  function mergeDeep(a, b) {
+    for (var k in b) {
+      if (b[k] && typeof b[k] === "object" && !Array.isArray(b[k]) && a[k] && typeof a[k] === "object") mergeDeep(a[k], b[k]);
+      else a[k] = b[k];
+    }
+    return a;
+  }
+
+  function upsert(key, canvasId, config) {
+    if (charts[key]) {
+      charts[key].data = config.data;
+      charts[key].options = config.options;
+      charts[key].update();
+    } else {
+      charts[key] = new Chart($(canvasId), config);
+    }
+  }
+
+  function render() {
+    var p = readParams();
+    setOutputs(p);
+    var s = simulate(p);
+    var rows = s.rows, last = s.last;
+    var real = state.real;
+    var adj = function (v, row) { return real ? v / row.defl : v; };
+
+    // Aliquota marginale indicativa
+    var marg = taxSaving(p, 100) / 100;
+    $("marginal-hint").textContent = "Risparmio per ogni 100 € dedotti: " + num0.format(marg * 100) + " € (IRPEF + addizionali).";
+    $("fund-tax-hint").textContent = "Aliquota effettiva sui rendimenti del fondo: " + pct2.format(s.fundTaxRate) + ".";
+
+    // KPI
+    var etfFinal = adj(last.etfNet, last), fondoFinal = adj(last.fondoNet, last);
+    var diff = fondoFinal - etfFinal;
+    $("k-etf").textContent = eur0.format(etfFinal);
+    $("k-fondo").textContent = eur0.format(fondoFinal);
+    var irrEtf = irr(p.contrib, p.years, last.etfNet);
+    var irrFondo = irr(p.contrib, p.years, last.fondoNet);
+    var realNote = real ? " reale" : "";
+    $("k-etf-sub").textContent = "Rendimento netto" + realNote + " " + pct2.format(real ? (1 + irrEtf) / (1 + p.infl) - 1 : irrEtf) + " l'anno";
+    $("k-fondo-sub").textContent = "Rendimento netto" + realNote + " " + pct2.format(real ? (1 + irrFondo) / (1 + p.infl) - 1 : irrFondo) + " l'anno";
+    $("k-diff").textContent = signedEur(diff);
+    var winnerFondo = diff >= 0;
+    var rel = etfFinal > 0 ? Math.abs(diff) / etfFinal : 0;
+    $("k-winner").innerHTML = '<span class="pill"><span class="sw" style="background:var(' + (winnerFondo ? "--fondo" : "--etf") + ')"></span>' +
+      (winnerFondo ? "Vince il fondo" : "Vince l'ETF") + " di " + pct1.format(rel) + "</span>";
+    $("k-refund").textContent = eur0.format(s.firstRefund) + " /anno";
+    var refundText = "Su " + eur0.format(s.firstDed) + " dedotti (" + pct1.format(s.firstDed > 0 ? s.firstRefund / s.firstDed : 0) + "). ";
+    if (p.refundMode === "spesa") refundText += "Totale speso: " + eur0.format(s.refundsSpent) + " nominali.";
+    else refundText += "Uscita al " + pct1.format(last.rate) + " dopo " + (p.prior + p.years) + " anni di adesione.";
+    $("k-refund-sub").textContent = refundText;
+
+    var modeText = { etf: "i rimborsi IRPEF investiti in un ETF a parte", fondo: "i rimborsi IRPEF versati nel fondo l'anno dopo", spesa: "i rimborsi IRPEF spesi, quindi esclusi" }[p.refundMode];
+    $("main-sub").textContent = "Valore dopo tutte le tasse di uscita, in " + (real ? "euro di oggi" : "euro nominali") + ". Il fondo include " + modeText + ".";
+
+    var labels = rows.map(function (r) { return r.t; });
+    var cEtf = tok("--etf"), cFondo = tok("--fondo"), cMuted = tok("--muted"), cSurf = tok("--surface");
+
+    // Grafico principale
+    var opt = mergeDeep(baseOptions(), {
+      scales: {
+        x: { title: { display: true, text: "Anno", color: cMuted, font: { family: FONT, size: 11 } } },
+        y: { beginAtZero: true, ticks: { callback: function (v) { return eurShort(v); } } }
+      },
+      plugins: { tooltip: { callbacks: {
+        title: function (items) { return "Anno " + items[0].label; },
+        label: function (c) { return " " + c.dataset.label + ": " + eur0.format(c.parsed.y); },
+        footer: function (items) {
+          var e = items.find(function (i) { return i.datasetIndex === 0; });
+          var f = items.find(function (i) { return i.datasetIndex === 1; });
+          if (!e || !f) return "";
+          return "Fondo − ETF: " + signedEur(f.parsed.y - e.parsed.y);
+        }
+      }, footerColor: tok("--ink"), footerFont: { family: FONT, weight: "600" } } }
+    });
+    function lineDs(label, data, color, extra) {
+      return mergeDeep({
+        label: label, data: data, borderColor: color, backgroundColor: color,
+        borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, pointHoverBorderWidth: 2,
+        pointHoverBorderColor: cSurf, tension: 0.15
+      }, extra || {});
+    }
+    upsert("main", "c-main", {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          lineDs("ETF", rows.map(function (r) { return adj(r.etfNet, r); }), cEtf),
+          lineDs("Fondo pensione", rows.map(function (r) { return adj(r.fondoNet, r); }), cFondo),
+          lineDs("Versato", rows.map(function (r) { return adj(r.pocket, r); }), cMuted, { borderWidth: 1.5, pointHoverRadius: 4 })
+        ]
+      },
+      options: opt,
+      plugins: [crosshair]
+    });
+
+    // Tasse e costi (nominali o reali approssimati al valore finale)
+    var cats = ["Costi di gestione", "Bollo 0,2%", "Tasse sui rendimenti", "Tassa di uscita", "Risparmio IRPEF"];
+    var keys = ["gestione", "bollo", "rendimenti", "uscita", "irpef"];
+    var costOpt = mergeDeep(baseOptions(), {
+      indexAxis: "y",
+      interaction: { mode: "nearest", axis: "y", intersect: false },
+      scales: {
+        x: { grid: { display: true, color: tok("--grid") }, border: { display: false }, ticks: { callback: function (v) { return eurShort(v); } } },
+        y: { grid: { display: false }, border: { color: tok("--axis") }, ticks: { color: tok("--ink-2"), font: { family: FONT, size: 12 } } }
+      },
+      plugins: { tooltip: { mode: "index", callbacks: {
+        label: function (c) { return " " + c.dataset.label + ": " + signedEur(c.parsed.x); }
+      } } }
+    });
+    var barBase = { borderRadius: 4, borderSkipped: false, barPercentage: 0.82, categoryPercentage: 0.72, borderWidth: 0 };
+    upsert("costs", "c-costs", {
+      type: "bar",
+      data: {
+        labels: cats,
+        datasets: [
+          mergeDeep({ label: "ETF", data: keys.map(function (k) { return s.costs.etf[k]; }), backgroundColor: cEtf }, barBase),
+          mergeDeep({ label: "Fondo", data: keys.map(function (k) { return s.costs.fondo[k]; }), backgroundColor: cFondo }, barBase)
+        ]
+      },
+      options: costOpt
+    });
+
+    // Aliquota di uscita
+    var rateOpt = mergeDeep(baseOptions(), {
+      scales: {
+        x: { title: { display: true, text: "Anni di adesione", color: cMuted, font: { family: FONT, size: 11 } } },
+        y: { min: 0.08, max: 0.16, ticks: { stepSize: 0.01, callback: function (v) { return Math.round(v * 100) + "%"; } } }
+      },
+      plugins: { tooltip: { callbacks: {
+        title: function (items) { return items[0].label + " anni di adesione"; },
+        label: function (c) { return " Aliquota: " + pct1.format(c.parsed.y); }
+      } } }
+    });
+    var rateLabels = [], rateData = [], ptRadius = [];
+    var maxM = Math.max(40, p.prior + p.years);
+    var horizonM = p.prior + p.years;
+    for (var m = 1; m <= maxM; m++) {
+      rateLabels.push(m); rateData.push(exitRate(m));
+      ptRadius.push(m === horizonM ? 6 : 0);
+    }
+    upsert("rate", "c-rate", {
+      type: "line",
+      data: {
+        labels: rateLabels,
+        datasets: [lineDs("Aliquota", rateData, cFondo, {
+          pointRadius: ptRadius, pointBackgroundColor: cFondo, pointBorderColor: cSurf, pointBorderWidth: 2, tension: 0
+        })]
+      },
+      options: rateOpt,
+      plugins: [crosshair, {
+        id: "horizonLabel",
+        afterDatasetsDraw: function (chart) {
+          var meta = chart.getDatasetMeta(0), el = meta.data[horizonM - 1];
+          if (!el) return;
+          var ctx = chart.ctx;
+          ctx.save();
+          ctx.fillStyle = tok("--ink");
+          ctx.font = "600 12px 'IBM Plex Sans', system-ui, sans-serif";
+          ctx.textAlign = el.x > chart.chartArea.right - 110 ? "right" : "left";
+          var dx = ctx.textAlign === "right" ? -10 : 10;
+          ctx.fillText("Tu: " + pct1.format(exitRate(horizonM)), el.x + dx, el.y - 12);
+          ctx.restore();
+        }
+      }]
+    });
+
+    // Sensibilità al rendimento
+    var sensLabels = [], sensData = [], sensColors = [];
+    for (var r = 0; r <= 10; r += 1) {
+      var q = Object.assign({}, p, { retEtf: r / 100, retFondo: r / 100 });
+      var sl = simulate(q).last;
+      var d = adj(sl.fondoNet - sl.etfNet, sl);
+      sensLabels.push(r + "%");
+      sensData.push(d);
+      sensColors.push(d >= 0 ? cFondo : cEtf);
+    }
+    var sensOpt = mergeDeep(baseOptions(), {
+      interaction: { mode: "index", intersect: false },
+      scales: {
+        x: { title: { display: true, text: "Rendimento lordo annuo (uguale per entrambi)", color: cMuted, font: { family: FONT, size: 11 } } },
+        y: { ticks: { callback: function (v) { return eurShort(v); } } }
+      },
+      plugins: { tooltip: { callbacks: {
+        title: function (items) { return "Rendimento lordo " + items[0].label; },
+        label: function (c) {
+          var v = c.parsed.y;
+          return " " + (v >= 0 ? "Il fondo vince di " : "L'ETF vince di ") + eur0.format(Math.abs(v));
+        }
+      } } }
+    });
+    upsert("sens", "c-sens", {
+      type: "bar",
+      data: { labels: sensLabels, datasets: [{ label: "Fondo − ETF", data: sensData, backgroundColor: sensColors, borderRadius: 4, borderSkipped: false, barPercentage: 0.7 }] },
+      options: sensOpt
+    });
+
+    // Tabella
+    var html = rows.map(function (r) {
+      var dd = adj(r.fondoNet - r.etfNet, r);
+      return "<tr" + (r.t === p.years ? ' class="hl"' : "") + "><td>" + r.t + "</td>" +
+        "<td>" + eur0.format(adj(r.pocket, r)) + "</td>" +
+        "<td>" + eur0.format(adj(r.etfNet, r)) + "</td>" +
+        "<td>" + eur0.format(adj(r.fondoGross, r)) + "</td>" +
+        "<td>" + pct1.format(r.rate) + "</td>" +
+        "<td>" + eur0.format(adj(r.refund, r)) + "</td>" +
+        "<td>" + eur0.format(adj(r.fondoNet, r)) + "</td>" +
+        '<td class="' + (dd >= 0 ? "pos" : "") + '">' + signedEur(dd) + "</td></tr>";
+    }).join("");
+    document.querySelector("#tbl tbody").innerHTML = html;
+  }
+
+  // ---------- Eventi ----------
+  var raf = 0;
+  function schedule() { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); }
+  document.querySelectorAll("aside input, aside select").forEach(function (el) {
+    el.addEventListener("input", schedule);
+    el.addEventListener("change", schedule);
+  });
+
+  function segGroup(id, key, onPick) {
+    var btns = document.querySelectorAll("#" + id + " button");
+    btns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        btns.forEach(function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+        state[key] = b.dataset.v;
+        if (onPick) onPick(b.dataset.v);
+        schedule();
+      });
+    });
+  }
+  segGroup("refund", "refundMode");
+  segGroup("fundType", "fundType", function (v) {
+    $("terFondo").value = FUND_PRESETS[v].ter.toFixed(2);
+    $("feeFondo").value = FUND_PRESETS[v].fee;
+  });
+
+  function setUnit(real) {
+    state.real = real;
+    $("btn-real").setAttribute("aria-pressed", real ? "true" : "false");
+    $("btn-nominal").setAttribute("aria-pressed", real ? "false" : "true");
+    schedule();
+  }
+  $("btn-nominal").addEventListener("click", function () { setUnit(false); });
+  $("btn-real").addEventListener("click", function () { setUnit(true); });
+
+  // Ridisegna i grafici quando cambia il tema
+  function rebuildCharts() {
+    Object.keys(charts).forEach(function (k) { charts[k].destroy(); delete charts[k]; });
+    render();
+  }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", rebuildCharts);
+  new MutationObserver(rebuildCharts).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (Object.keys(charts).length) rebuildCharts(); });
+  render();
+})();
+</script>
+</body>
+</html>
