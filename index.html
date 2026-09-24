@@ -195,6 +195,7 @@
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .seg.seg2 { grid-template-columns: repeat(2, 1fr); }
   .seg button {
     font: 500 12px var(--font);
     padding: 7px 4px;
@@ -366,7 +367,14 @@
         <div class="field">
           <label for="terEtf">TER <output id="terEtf-out"></output></label>
           <input type="range" id="terEtf" min="0" max="0.8" step="0.01" value="0.20">
-          <span class="hint">Bollo 0,2% sul controvalore di fine anno, pagato vendendo quote. Plusvalenze al 26%.</span>
+        </div>
+        <div class="field">
+          <label>Bollo 0,2% pagato…</label>
+          <div class="seg seg2" id="bolloMode" role="group" aria-label="Modalità di pagamento del bollo">
+            <button type="button" data-v="cash" aria-pressed="true">Dal conto</button>
+            <button type="button" data-v="sell" aria-pressed="false">Vendendo quote</button>
+          </div>
+          <span class="hint" id="bollo-hint"></span>
         </div>
       </fieldset>
 
@@ -515,7 +523,7 @@
       <section class="card notes">
         <h2>Come calcola il simulatore</h2>
         <ul>
-          <li><b>ETF.</b> Versamento a inizio anno, crescita al rendimento lordo meno TER. A fine anno l'imposta di bollo dello 0,2% sul controvalore viene pagata vendendo quote, e la plusvalenza realizzata in quella vendita è tassata al 26%. In uscita si paga il 26% sulla plusvalenza residua.</li>
+          <li><b>ETF.</b> Versamento a inizio anno, crescita al rendimento lordo meno TER. A fine anno si paga l'imposta di bollo dello 0,2% sul controvalore. Se la paghi dal conto, le quote restano investite e il bollo è un'uscita di tasca tua: viene sottratto dal netto finale e incluso nei flussi del rendimento netto annuo. Se la paghi vendendo quote, la plusvalenza realizzata in quella vendita è tassata subito al 26%. In uscita si paga il 26% sulla plusvalenza residua.</li>
           <li><b>Deduzione IRPEF.</b> Il risparmio è la differenza tra l'IRPEF netta calcolata sul reddito pieno e quella sul reddito ridotto del versamento dedotto, con gli scaglioni scelti e, per i dipendenti, le detrazioni da lavoro (art. 13 TUIR). Si somma il risparmio sulle addizionali. Il tetto di 5.164,57 € include il contributo del datore; il rimborso arriva l'anno dopo.</li>
           <li><b>Fondo pensione.</b> Il rendimento maturato ogni anno, al netto dei costi, è tassato al 20%, ridotto al 12,5% per la parte in titoli di Stato. Le perdite generano un credito usato negli anni successivi. Il fondo non paga il bollo.</li>
           <li><b>Uscita dal fondo.</b> Sulla parte di prestazione formata da contributi dedotti si applica il 15%, ridotto di 0,30 punti per ogni anno di adesione oltre il 15°, fino al 9%. I rendimenti, già tassati, e i contributi non dedotti sono esenti.</li>
@@ -590,19 +598,23 @@
 
   // ---------- Posizione in ETF (valore + costo fiscale) ----------
   function newPos() { return { v: 0, b: 0, ter: 0, bollo: 0, cgt: 0 }; }
-  function etfYear(pos, r, ter) {
-    if (pos.v <= 0) return;
+  // Restituisce il bollo pagato dal conto nell'anno (0 se pagato vendendo quote)
+  function etfYear(pos, r, ter, bolloCash) {
+    if (pos.v <= 0) return 0;
     var grown = pos.v * (1 + r);
     pos.ter += grown * ter;
     pos.v = grown * (1 - ter);
-    // bollo 0,2% sul controvalore di fine anno, pagato vendendo quote
+    // bollo 0,2% sul controvalore di fine anno
     var bollo = BOLLO * pos.v;
+    pos.bollo += bollo;
+    if (bolloCash) return bollo;
+    // pagato vendendo quote: la plusvalenza realizzata è tassata subito
     var g = Math.max(0, (pos.v - pos.b) / pos.v);  // quota di plusvalenza per euro venduto
     var sold = bollo / (1 - CGT * g);
     pos.cgt += CGT * sold * g;
-    pos.bollo += bollo;
     pos.b -= sold * (pos.b / pos.v);
     pos.v -= sold;
+    return 0;
   }
   function liquidate(pos) {
     var tax = CGT * Math.max(0, pos.v - pos.b);
@@ -618,13 +630,21 @@
     var employerDed = Math.min(p.employer, DEDUCTION_CAP);
     var rows = [];
     var firstRefund = 0, firstDed = 0;
+    var cash = p.bolloMode === "cash";
+    var etfCashBollo = 0, sideCashBollo = 0;
+    // Flussi di cassa per il rendimento netto annuo: [tempo in anni, importo]
+    var etfFlows = [], fondoFlows = [];
 
     for (var t = 1; t <= p.years; t++) {
       pocket += p.contrib;
 
       // ETF: versamento a inizio anno
       etf.v += p.contrib; etf.b += p.contrib;
-      etfYear(etf, p.retEtf, p.terEtf);
+      etfFlows.push([t - 1, -p.contrib]);
+      fondoFlows.push([t - 1, -p.contrib]);
+      var eb = etfYear(etf, p.retEtf, p.terEtf, cash);
+      etfCashBollo += eb;
+      if (eb) etfFlows.push([t, -eb]);
 
       // Rimborso IRPEF dell'anno precedente
       var own = p.contrib;
@@ -656,7 +676,9 @@
       fTax += tax;
       F = after - tax;
 
-      etfYear(side, p.retEtf, p.terEtf);
+      var sb = etfYear(side, p.retEtf, p.terEtf, cash);
+      sideCashBollo += sb;
+      if (sb) fondoFlows.push([t, -sb]);
       pending = refund;
 
       // Valori netti se si liquidasse a fine anno t
@@ -666,12 +688,14 @@
       var rate = exitRate(membership);
       var exitTax = rate * Math.min(dedBase, Math.max(0, F));
       var cashRefund = p.refundMode === "spesa" ? 0 : pending;
-      var fondoNet = F - exitTax + sideLiq.net + cashRefund;
+      var fondoNet = F - exitTax + sideLiq.net + cashRefund - sideCashBollo;
+      var etfNet = etfLiq.net - etfCashBollo;
       var defl = Math.pow(1 + p.infl, t);
 
       rows.push({
         t: t, pocket: pocket, defl: defl,
-        etfNet: etfLiq.net, fondoGross: F, fondoNet: fondoNet,
+        etfNet: etfNet, etfPortfolio: etfLiq.net, etfCashBollo: etfCashBollo,
+        fondoGross: F, fondoNet: fondoNet,
         rate: rate, refund: refund, exitTax: exitTax,
         etfTaxFinal: etfLiq.tax, sideTaxFinal: sideLiq.tax
       });
@@ -679,8 +703,12 @@
 
     var last = rows[rows.length - 1];
     if (p.refundMode === "spesa") refundsSpent += pending;
+    // I flussi di bollo sono già tra i flussi: il valore finale è quello del portafoglio
+    etfFlows.push([p.years, last.etfNet + etfCashBollo]);
+    fondoFlows.push([p.years, last.fondoNet + sideCashBollo]);
     return {
       rows: rows, last: last,
+      etfFlows: etfFlows, fondoFlows: fondoFlows,
       firstRefund: firstRefund, firstDed: firstDed,
       irpefSaved: irpefSaved, refundsSpent: refundsSpent,
       fundTaxRate: fundTaxRate,
@@ -703,17 +731,16 @@
     };
   }
 
-  // Tasso interno di rendimento: versamenti a inizio anno, valore finale a fine anno N
-  function irr(contrib, years, finalValue) {
+  // Tasso interno di rendimento sui flussi [tempo, importo] (uscite negative)
+  function irr(flows) {
+    var T = flows.reduce(function (m, f) { return Math.max(m, f[0]); }, 0);
     function fv(r) {
-      var s = 0;
-      for (var t = 0; t < years; t++) s += contrib * Math.pow(1 + r, years - t);
-      return s;
+      return flows.reduce(function (s, f) { return s + f[1] * Math.pow(1 + r, T - f[0]); }, 0);
     }
     var lo = -0.99, hi = 1;
     for (var i = 0; i < 100; i++) {
       var mid = (lo + hi) / 2;
-      if (fv(mid) > finalValue) hi = mid; else lo = mid;
+      if (fv(mid) > 0) lo = mid; else hi = mid;
     }
     return (lo + hi) / 2;
   }
@@ -733,7 +760,7 @@
 
   // ---------- Stato UI ----------
   var $ = function (id) { return document.getElementById(id); };
-  var state = { real: false, refundMode: "etf", fundType: "neg" };
+  var state = { real: false, refundMode: "etf", fundType: "neg", bolloMode: "cash" };
 
   function readParams() {
     return {
@@ -752,7 +779,8 @@
       govShare: +$("govShare").value / 100,
       employer: Math.max(0, +$("employer").value || 0),
       prior: Math.max(0, Math.round(+$("prior").value || 0)),
-      refundMode: state.refundMode
+      refundMode: state.refundMode,
+      bolloMode: state.bolloMode
     };
   }
 
@@ -862,10 +890,15 @@
     var diff = fondoFinal - etfFinal;
     $("k-etf").textContent = eur0.format(etfFinal);
     $("k-fondo").textContent = eur0.format(fondoFinal);
-    var irrEtf = irr(p.contrib, p.years, last.etfNet);
-    var irrFondo = irr(p.contrib, p.years, last.fondoNet);
+    var irrEtf = irr(s.etfFlows);
+    var irrFondo = irr(s.fondoFlows);
     var realNote = real ? " reale" : "";
-    $("k-etf-sub").textContent = "Rendimento netto" + realNote + " " + pct2.format(real ? (1 + irrEtf) / (1 + p.infl) - 1 : irrEtf) + " l'anno";
+    var etfSub = "Rendimento netto" + realNote + " " + pct2.format(real ? (1 + irrEtf) / (1 + p.infl) - 1 : irrEtf) + " l'anno";
+    if (p.bolloMode === "cash") etfSub += ". Portafoglio " + eur0.format(adj(last.etfPortfolio, last)) + " meno " + eur0.format(adj(last.etfCashBollo, last)) + " di bollo pagato dal conto.";
+    $("k-etf-sub").textContent = etfSub;
+    $("bollo-hint").textContent = p.bolloMode === "cash"
+      ? "Le quote restano investite. Il bollo è un'uscita di tasca tua e viene sottratto dal netto finale."
+      : "Ogni anno vendi quote per pagarlo e la plusvalenza realizzata è tassata subito al 26%.";
     $("k-fondo-sub").textContent = "Rendimento netto" + realNote + " " + pct2.format(real ? (1 + irrFondo) / (1 + p.infl) - 1 : irrFondo) + " l'anno";
     $("k-diff").textContent = signedEur(diff);
     var winnerFondo = diff >= 0;
@@ -1058,6 +1091,7 @@
     });
   }
   segGroup("refund", "refundMode");
+  segGroup("bolloMode", "bolloMode");
   segGroup("fundType", "fundType", function (v) {
     $("terFondo").value = FUND_PRESETS[v].ter.toFixed(2);
     $("feeFondo").value = FUND_PRESETS[v].fee;
